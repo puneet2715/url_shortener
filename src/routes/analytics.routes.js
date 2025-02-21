@@ -10,18 +10,17 @@ const analyticsLimiter = rateLimit({
   max: 100 // limit each IP to 100 requests per windowMs
 });
 
-// Get URL analytics
-router.get('/:alias', authenticateToken, analyticsLimiter, async (req, res, next) => {
+// Get overall analytics - This must come before /:alias route
+router.get('/overall', authenticateToken, analyticsLimiter, async (req, res, next) => {
   try {
-    const { alias } = req.params;
-    const analytics = await UrlService.getUrlAnalytics(alias);
+    const analytics = await UrlService.getOverallAnalytics(req.user.userId);
     res.json(analytics);
   } catch (err) {
     next(err);
   }
 });
 
-// Get topic-based analytics
+// Get topic-based analytics - This must come before /:alias route
 router.get('/topic/:topic', authenticateToken, analyticsLimiter, async (req, res, next) => {
   try {
     const { topic } = req.params;
@@ -32,10 +31,11 @@ router.get('/topic/:topic', authenticateToken, analyticsLimiter, async (req, res
   }
 });
 
-// Get overall analytics
-router.get('/overall', authenticateToken, analyticsLimiter, async (req, res, next) => {
+// Get URL analytics
+router.get('/:alias', authenticateToken, analyticsLimiter, async (req, res, next) => {
   try {
-    const analytics = await UrlService.getOverallAnalytics(req.user.userId);
+    const { alias } = req.params;
+    const analytics = await UrlService.getUrlAnalytics(alias);
     res.json(analytics);
   } catch (err) {
     next(err);
