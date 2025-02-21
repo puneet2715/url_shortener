@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: url-shorty
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      # Add any additional environment variables that might need to be overridden
+    networks:
+      - url-shorty-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api-docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ./logs:/usr/src/app/logs
+      # Mount logs directory for persistent logging
+      - ./uploads:/usr/src/app/uploads
+      # Mount uploads directory if you plan to handle file uploads in the future
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+
+networks:
+  url-shorty-network:
+    driver: bridge 
