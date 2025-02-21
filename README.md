@@ -1,0 +1,247 @@
+# Advanced URL Shortener with Analytics
+
+A comprehensive URL shortening service with advanced analytics, custom aliases, and rate limiting capabilities. Built with Node.js, Express, PostgreSQL, and Redis.
+
+## Features
+
+- **User Authentication**: Secure login via Google OAuth
+- **URL Shortening**: Create short URLs with optional custom aliases
+- **Topic-based Organization**: Group URLs under specific topics (e.g., acquisition, activation, retention)
+- **Advanced Analytics**:
+  - Total clicks and unique visitors
+  - Click statistics by date (last 7 days)
+  - OS and device type analytics
+  - Topic-based analytics
+  - Overall user analytics
+- **Rate Limiting**: Prevent abuse of the API
+- **Caching**: Redis-based caching for improved performance
+- **API Documentation**: Swagger/OpenAPI documentation
+- **Containerization**: Docker support for easy deployment
+
+## Prerequisites
+
+- Node.js (v20 or later)
+- PostgreSQL (hosted on VPS)
+- Redis (hosted on VPS)
+- Google OAuth credentials
+
+## Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```env
+# Server Configuration
+PORT=3000
+NODE_ENV=development
+
+# Database Configuration
+POSTGRES_HOST=your_postgres_host
+POSTGRES_PORT=5432
+POSTGRES_DB=url_shorty
+POSTGRES_USER=your_postgres_user
+POSTGRES_PASSWORD=your_postgres_password
+
+# Redis Configuration
+REDIS_HOST=your_redis_host
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+
+# Session Configuration
+SESSION_SECRET=your_session_secret
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000  # 15 minutes
+RATE_LIMIT_MAX_REQUESTS=100
+
+# URL Configuration
+BASE_URL=http://localhost:3000
+```
+
+## Database Setup
+
+1. Create a PostgreSQL database:
+```sql
+CREATE DATABASE url_shorty;
+```
+
+2. Run the database migrations:
+```bash
+psql -U your_postgres_user -d url_shorty -f src/db/schema.sql
+```
+
+## Installation
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Start the server:
+```bash
+npm start
+```
+
+For development:
+```bash
+npm run dev
+```
+
+## Docker Deployment
+
+### Using Docker Compose (Recommended)
+
+1. Make sure you have Docker and Docker Compose installed on your system.
+
+2. Create necessary directories for persistent data:
+```bash
+mkdir -p logs uploads
+```
+
+3. Start the application:
+```bash
+docker-compose up -d
+```
+
+4. View logs:
+```bash
+docker-compose logs -f
+```
+
+5. Stop the application:
+```bash
+docker-compose down
+```
+
+### Using Docker Directly
+
+1. Build the Docker image:
+```bash
+docker build -t url-shorty .
+```
+
+2. Run the container:
+```bash
+docker run -p 3000:3000 --env-file .env url-shorty
+```
+
+## API Documentation
+
+Access the Swagger documentation at:
+```
+http://localhost:3000/api-docs
+```
+
+## API Endpoints
+
+### Authentication
+- `GET /auth/google`: Initiate Google OAuth login
+- `GET /auth/google/callback`: Google OAuth callback
+  - Returns: Access token, refresh token, and user information
+- `GET /auth/logout`: Logout
+
+### URL Operations
+- `POST /api/shorten`: Create short URL
+  - Requires authentication
+  - Body: 
+    ```json
+    {
+      "longUrl": "https://example.com/very/long/url",
+      "customAlias": "custom-alias",  // optional
+      "topic": "acquisition"  // optional
+    }
+    ```
+  - Returns: Short URL and creation timestamp
+
+- `GET /api/shorten/{alias}`: Redirect to original URL
+  - Public endpoint
+  - Tracks visit analytics
+
+### Analytics
+- `GET /api/analytics/{alias}`: Get URL analytics
+  - Requires authentication
+  - Returns:
+    - Total clicks
+    - Unique visitors
+    - Click statistics by date (last 7 days)
+    - OS and device type statistics
+
+- `GET /api/analytics/topic/{topic}`: Get topic-based analytics
+  - Requires authentication
+  - Returns:
+    - Total clicks for topic
+    - Unique visitors for topic
+    - Click statistics by date
+    - Per-URL statistics
+
+- `GET /api/analytics/overall`: Get overall analytics
+  - Requires authentication
+  - Returns:
+    - Total URLs
+    - Total clicks
+    - Unique visitors
+    - Click statistics by date
+    - OS and device type statistics
+
+## Rate Limiting
+
+The API implements rate limiting to prevent abuse:
+- URL creation: 100 requests per 15 minutes per IP
+- Analytics endpoints: 100 requests per 15 minutes per IP
+
+## Caching
+
+- URL mappings are cached in Redis for 24 hours
+- Analytics data uses database queries with optimized indexes for performance
+- Database schema includes indexes for:
+  - User IDs
+  - Short codes
+  - Analytics data
+  - Topic-based queries
+
+## Security Features
+
+- JWT-based authentication
+- Google OAuth for secure user authentication
+- Rate limiting to prevent abuse
+- Secure session management
+- Input validation and sanitization
+- Helmet middleware for security headers
+- CORS protection
+- Environment-based security settings
+
+## Error Handling
+
+The API implements comprehensive error handling:
+- Validation errors (400)
+- Authentication errors (401)
+- Rate limiting errors (429)
+- Not found errors (404)
+- Server errors (500)
+
+## Development
+
+The project uses the following development tools:
+- Nodemon for development auto-reload
+- Jest for testing
+- Supertest for API testing
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Create a Pull Request
+
+## License
+
+MIT License
+
+## Support
+
+For support, please open an issue in the repository. 
