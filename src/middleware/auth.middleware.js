@@ -9,8 +9,13 @@ const authenticateToken = (req, res, next) => {
   }
 
   try {
-    const user = jwt.verify(token, process.env.SESSION_SECRET);
-    req.user = user;
+    const decoded = jwt.verify(token, process.env.SESSION_SECRET);
+    req.user = {
+      userId: decoded.userId, // This is now the google_id
+      email: decoded.email,
+      name: decoded.name,
+      avatar: decoded.avatar
+    };
     next();
   } catch (err) {
     return res.status(403).json({ error: 'Invalid or expired token' });
