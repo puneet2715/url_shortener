@@ -5,42 +5,50 @@ const geoip = require('geoip-lite');
 
 class UrlService {
   static async createShortUrl(userId, longUrl, customAlias, topic) {
-    const shortCode = customAlias || nanoid(8);
+    const shortUrl = customAlias || nanoid(8);
 
     // Check if custom alias is already taken
     if (customAlias) {
-      const existing = await pool.query('SELECT id FROM urls WHERE short_code = $1', [customAlias]);
+      const existing = await pool.query('SELECT id FROM urls WHERE short_url = $1', [customAlias]);
       if (existing.rows.length) {
-        throw { type: 'validation', message: 'Custom alias already taken' };
+        throw { 
+          type: 'validation', 
+          message: 'Custom alias already taken',
+          details: 'Please choose a different custom alias'
+        };
       }
     }
 
     const result = await pool.query(
-      'INSERT INTO urls (user_id, long_url, short_code, topic) VALUES ($1, $2, $3, $4) RETURNING *',
-      [userId, longUrl, shortCode, topic]
+      'INSERT INTO urls (user_id, long_url, short_url, topic) VALUES ($1, $2, $3, $4) RETURNING *',
+      [userId, longUrl, shortUrl, topic]
     );
 
     // Cache the URL mapping
-    await redisClient.set(`url:${shortCode}`, longUrl, {
+    await redisClient.set(`url:${shortUrl}`, longUrl, {
       EX: 24 * 60 * 60 // 24 hours
     });
 
     return result.rows[0];
   }
 
-  static async getLongUrl(shortCode) {
+  static async getLongUrl(shortUrl) {
     // Try cache first
-    let longUrl = await redisClient.get(`url:${shortCode}`);
+    let longUrl = await redisClient.get(`url:${shortUrl}`);
     
     if (!longUrl) {
-      const result = await pool.query('SELECT long_url FROM urls WHERE short_code = $1', [shortCode]);
+      const result = await pool.query('SELECT long_url FROM urls WHERE short_url = $1', [shortUrl]);
       if (!result.rows.length) {
-        throw { type: 'validation', message: 'Short URL not found' };
+        throw { 
+          type: 'validation', 
+          message: 'Short URL not found',
+          details: 'The specified short URL does not exist'
+        };
       }
       longUrl = result.rows[0].long_url;
       
       // Cache the result
-      await redisClient.set(`url:${shortCode}`, longUrl, {
+      await redisClient.set(`url:${shortUrl}`, longUrl, {
         EX: 24 * 60 * 60 // 24 hours
       });
     }
@@ -48,9 +56,15 @@ class UrlService {
     return longUrl;
   }
 
-  static async trackVisit(shortCode, req) {
-    const urlResult = await pool.query('SELECT id FROM urls WHERE short_code = $1', [shortCode]);
-    if (!urlResult.rows.length) return;
+  static async trackVisit(shortUrl, req) {
+    const urlResult = await pool.query('SELECT id FROM urls WHERE short_url = $1', [shortUrl]);
+    if (!urlResult.rows.length) {
+      throw { 
+        type: 'validation', 
+        message: 'Short URL not found',
+        details: 'Cannot track visit for non-existent URL'
+      };
+    }
 
     const urlId = urlResult.rows[0].id;
     const ua = UAParser(req.headers['user-agent']);
@@ -80,10 +94,14 @@ class UrlService {
     );
   }
 
-  static async getUrlAnalytics(shortCode) {
-    const urlResult = await pool.query('SELECT id FROM urls WHERE short_code = $1', [shortCode]);
+  static async getUrlAnalytics(shortUrl) {
+    const urlResult = await pool.query('SELECT id FROM urls WHERE short_url = $1', [shortUrl]);
     if (!urlResult.rows.length) {
-      throw { type: 'validation', message: 'URL not found' };
+      throw { 
+        type: 'validation', 
+        message: 'URL not found',
+        details: 'Cannot retrieve analytics for non-existent URL'
+      };
     }
 
     const urlId = urlResult.rows[0].id;
@@ -147,9 +165,17 @@ class UrlService {
   }
 
   static async getTopicAnalytics(topic) {
+    if (!topic) {
+      throw { 
+        type: 'validation', 
+        message: 'Topic is required',
+        details: 'Please provide a valid topic to retrieve analytics'
+      };
+    }
+
     // Get all URLs for the topic
     const urlsResult = await pool.query(
-      `SELECT id, short_code as "shortUrl"
+      `SELECT id, short_url as "shortUrl"
       FROM urls 
       WHERE topic = $1`,
       [topic]
@@ -219,7 +245,7 @@ class UrlService {
   }
 
   static async getOverallAnalytics(userId) {
-    // Get all URLs for the user
+    // Get all URLs for the user using google_id directly
     const urlsResult = await pool.query(
       'SELECT id FROM urls WHERE user_id = $1',
       [userId]

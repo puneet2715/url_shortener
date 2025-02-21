@@ -22,7 +22,7 @@ router.post('/', authenticateToken, createUrlLimiter, async (req, res, next) => 
     const url = await UrlService.createShortUrl(req.user.userId, longUrl, customAlias, topic);
     
     res.json({
-      shortUrl: `${process.env.BASE_URL}/api/shorten/${url.short_code}`,
+      shortUrl: `${process.env.BASE_URL}/api/shorten/${url.short_url}`,
       createdAt: url.created_at
     });
   } catch (err) {
@@ -31,13 +31,13 @@ router.post('/', authenticateToken, createUrlLimiter, async (req, res, next) => 
 });
 
 // Redirect to long URL
-router.get('/:alias', async (req, res, next) => {
+router.get('/:shortUrl', async (req, res, next) => {
   try {
-    const { alias } = req.params;
-    const longUrl = await UrlService.getLongUrl(alias);
+    const { shortUrl } = req.params;
+    const longUrl = await UrlService.getLongUrl(shortUrl);
     
     // Track the visit
-    await UrlService.trackVisit(alias, req);
+    await UrlService.trackVisit(shortUrl, req);
     
     res.redirect(longUrl);
   } catch (err) {
