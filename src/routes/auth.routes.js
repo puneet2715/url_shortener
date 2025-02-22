@@ -6,7 +6,10 @@ const { logger } = require('../config/logger');
 
 // Google OAuth login route
 router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    state: Date.now().toString()
+  })
 );
 
 // Google OAuth callback route
@@ -23,10 +26,10 @@ router.get('/google/callback',
         throw new Error('No user data received from Google authentication');
       }
 
-      // Pass the entire profile object from Google
       const { user, accessToken, refreshToken } = await AuthService.handleGoogleLogin(req.user);
       
-      res.json({
+      // Store auth data in session for later use
+      req.session.authData = {
         accessToken,
         refreshToken,
         user: {
@@ -35,7 +38,10 @@ router.get('/google/callback',
           name: user.name,
           avatar: user.avatar
         }
-      });
+      };
+
+      // Redirect to API docs
+      res.redirect('/api-docs');
     } catch (error) {
       logger.error('Authentication error:', { 
         error: error.message, 
@@ -51,11 +57,49 @@ router.get('/google/callback',
   }
 );
 
+// New endpoint to get stored auth data
+router.get('/current-auth', (req, res) => {
+  if (!req.session.authData) {
+    return res.status(401).json({ 
+      error: 'No authentication data',
+      message: 'Please login first'
+    });
+  }
+  res.json(req.session.authData);
+});
+
 // Logout route
 router.get('/logout', (req, res) => {
-  req.logout(() => {
-    res.json({ message: 'Logged out successfully' });
-  });
+  try {
+    // Clear the authentication data from session
+    req.session.authData = null;
+    
+    // Passport logout
+    req.logout(() => {
+      // Destroy the session
+      req.session.destroy((err) => {
+        if (err) {
+          logger.error('Error destroying session:', err);
+          return res.status(500).json({ 
+            error: 'Logout Error',
+            message: 'Failed to complete logout process'
+          });
+        }
+        
+        res.json({ message: 'Logged out successfully' });
+      });
+    });
+  } catch (error) {
+    logger.error('Logout error:', { 
+      error: error.message, 
+      stack: error.stack 
+    });
+    
+    res.status(500).json({ 
+      error: 'Logout Error',
+      message: error.message || 'Failed to logout'
+    });
+  }
 });
 
 module.exports = router; 
