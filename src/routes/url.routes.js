@@ -22,7 +22,7 @@ router.post('/', authenticateToken, createUrlLimiter, async (req, res, next) => 
     const url = await UrlService.createShortUrl(req.user.userId, longUrl, customAlias, topic);
     
     res.json({
-      shortUrl: `${process.env.BASE_URL}/api/shorten/${url.short_url}`,
+      shortUrl: `${process.env.NODE_ENV === 'production' ? process.env.PROD_URL : process.env.BASE_URL}/api/shorten/${url.short_url}`,
       createdAt: url.created_at
     });
   } catch (err) {
