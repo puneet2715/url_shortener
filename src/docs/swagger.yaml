@@ -81,7 +81,37 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: integer
+                        type: string
+                      email:
+                        type: string
+                      name:
+                        type: string
+                      avatar:
+                        type: string
+                        description: URL of the user's Google avatar
+
+  /auth/current-auth:
+    get:
+      summary: Get current authentication data
+      tags:
+        - Authentication
+      responses:
+        200:
+          description: Current authentication data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
                       email:
                         type: string
                       name:
