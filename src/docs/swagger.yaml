@@ -5,6 +5,8 @@ info:
   version: 1.0.0
 
 servers:
+  - url: https://urlshort.shadowdragon.dev
+    description: Production server
   - url: http://localhost:3000
     description: Development server
 
@@ -116,6 +118,29 @@ paths:
                         type: string
                       name:
                         type: string
+                      avatar:
+                        type: string
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    get:
+      summary: Logout user
+      tags:
+        - Authentication
+      responses:
+        200:
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+        401:
+          $ref: '#/components/responses/Unauthorized'
 
   /api/shorten:
     post:
