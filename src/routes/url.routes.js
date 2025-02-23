@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticateToken } = require('../middleware/auth.middleware');
 const UrlService = require('../services/url.service');
 const rateLimit = require('express-rate-limit');
+const { validateUrl } = require('../utils/validator');
 
 // Rate limiting middleware
 const createUrlLimiter = rateLimit({
@@ -17,6 +18,10 @@ router.post('/', authenticateToken, createUrlLimiter, async (req, res, next) => 
     
     if (!longUrl) {
       return res.status(400).json({ error: 'Long URL is required' });
+    }
+
+    if (!validateUrl(longUrl)) {
+      return res.status(400).json({ error: 'Invalid URL format' });
     }
 
     const url = await UrlService.createShortUrl(req.user.userId, longUrl, customAlias, topic);
@@ -34,14 +39,27 @@ router.post('/', authenticateToken, createUrlLimiter, async (req, res, next) => 
 router.get('/:shortUrl', async (req, res, next) => {
   try {
     const { shortUrl } = req.params;
+    
+    // Get the long URL first
     const longUrl = await UrlService.getLongUrl(shortUrl);
     
-    // Track the visit
-    await UrlService.trackVisit(shortUrl, req);
+    // If we got here, the URL exists, so track the visit
+    // Use .catch to handle any tracking errors without affecting the redirect
+    UrlService.trackVisit(shortUrl, req).catch(err => {
+      console.error('Error tracking visit:', err);
+    });
     
-    res.redirect(longUrl);
+    // Redirect to the long URL
+    return res.redirect(longUrl);
   } catch (err) {
-    next(err);
+    // Pass validation errors to the error handler
+    if (err.type === 'validation') {
+      return next(err);
+    }
+    
+    // For any other errors, log them but return a generic error
+    console.error('Error handling redirect:', err);
+    return next(new Error('Failed to process URL'));
   }
 });
 

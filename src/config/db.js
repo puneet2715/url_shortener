@@ -11,13 +11,23 @@ const pool = new Pool({
 });
 
 // Redis configuration
-const redisClient = Redis.createClient({
-  url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
-  password: process.env.REDIS_PASSWORD
-});
+let redisClient;
+if (process.env.NODE_ENV === 'test') {
+  // In test environment, use the mock Redis client
+  redisClient = require('../tests/mocks/redis');
+} else {
+  // In other environments, create a real Redis client
+  redisClient = Redis.createClient({
+    socket: {
+      host: process.env.REDIS_HOST,
+      port: process.env.REDIS_PORT
+    },
+    password: process.env.REDIS_PASSWORD || undefined
+  });
 
-redisClient.on('error', (err) => console.log('Redis Client Error', err));
-redisClient.connect().catch(console.error);
+  redisClient.on('error', (err) => console.log('Redis Client Error', err));
+  redisClient.connect().catch(console.error);
+}
 
 module.exports = {
   pool,
