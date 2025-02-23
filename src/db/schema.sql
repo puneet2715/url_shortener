@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS urls (
     id SERIAL PRIMARY KEY,
     user_id VARCHAR(255) REFERENCES users(google_id),
     long_url TEXT NOT NULL,
-    short_url VARCHAR(10) UNIQUE NOT NULL,
+    short_url VARCHAR(15) UNIQUE NOT NULL,
     topic VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     last_accessed TIMESTAMP WITH TIME ZONE
