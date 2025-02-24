@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   url-shorty:
-    image: ${DOCKER_IMAGE:-puneet2109/url-shorty}:latest
+    image: puneet2109/url-shorty:latest
     container_name: url-shorty
     restart: unless-stopped
     ports:
@@ -12,7 +12,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV:-production}
     networks:
-      - url-shorty-network
+      - nginx_proxy_manager_default
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api-docs"]
       interval: 30s
@@ -29,5 +29,5 @@ services:
         compress: "true"
 
 networks:
-  url-shorty-network:
-    driver: bridge
+  nginx_proxy_manager_default:
+    external: true

@@ -6,7 +6,7 @@ on:
       - cicd
 
 env:
-  DOCKER_IMAGE: puneet2109/url-shorty  # Replace with your Docker Hub username
+  DOCKER_IMAGE: puneet2109/url-shorty
   
 jobs:
   deploy:
@@ -41,6 +41,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /root/docker/url_shortener_alter_office
+            export DOCKER_IMAGE=puneet2109/url-shorty
             docker compose pull
-            docker compose up -d --force-recreate url-shorty
+            docker compose up -d --force-recreate
             docker image prune -f 
