@@ -1,10 +1,8 @@
 version: '3.8'
 
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  url-shorty:
+    image: ${DOCKER_IMAGE:-puneet2109/url-shorty}:latest
     container_name: url-shorty
     restart: unless-stopped
     ports:
@@ -12,8 +10,7 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      # Add any additional environment variables that might need to be overridden
+      - NODE_ENV=${NODE_ENV:-production}
     networks:
       - url-shorty-network
     healthcheck:
@@ -23,9 +20,7 @@ services:
       retries: 3
     volumes:
       - ./logs:/usr/src/app/logs
-      # Mount logs directory for persistent logging
       - ./uploads:/usr/src/app/uploads
-      # Mount uploads directory if you plan to handle file uploads in the future
     logging:
       driver: "json-file"
       options:
@@ -35,4 +30,4 @@ services:
 
 networks:
   url-shorty-network:
-    driver: bridge 
+    driver: bridge
