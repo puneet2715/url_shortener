@@ -49,6 +49,6 @@ jobs:
             # Pull the latest image
             docker compose pull
             # Start the services
-            docker compose up -d
+            docker compose up --build -d
             # Clean up unused images
             docker image prune -f 
