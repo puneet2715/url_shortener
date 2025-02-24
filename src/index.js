@@ -28,7 +28,7 @@ app.use(helmet());
 // Setup request logging
 app.use(morgan('combined', { stream }));
 
-// Session-configuration
+// Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
