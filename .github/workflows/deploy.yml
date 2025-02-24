@@ -41,7 +41,13 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /root/docker/url_shortener_alter_office
-            export DOCKER_IMAGE=puneet2109/url-shorty
+            # Stop and remove existing container
+            docker compose down
+            # Remove the existing image to force a new pull
+            docker rmi puneet2109/url-shorty:latest || true
+            # Pull the latest image
             docker compose pull
-            docker compose up -d --force-recreate
+            # Start the services
+            docker compose up -d
+            # Clean up unused images
             docker image prune -f 
