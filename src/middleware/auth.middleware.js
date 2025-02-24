@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const { TokenService } = require('../services/token.service');
 
-const authenticateToken = (req, res, next) => {
+const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -9,6 +10,12 @@ const authenticateToken = (req, res, next) => {
   }
 
   try {
+    // Check if token is blacklisted
+    const isBlacklisted = await TokenService.isTokenBlacklisted(token);
+    if (isBlacklisted) {
+      return res.status(401).json({ error: 'Token has been revoked' });
+    }
+
     const decoded = jwt.verify(token, process.env.SESSION_SECRET);
     req.user = {
       userId: decoded.userId, // This is now the google_id

@@ -125,9 +125,12 @@ paths:
 
   /auth/logout:
     get:
-      summary: Logout user
+      summary: Logout user and invalidate current token
       tags:
         - Authentication
+      security:
+        - BearerAuth: []
+      description: Requires a valid access token. The provided token will be blacklisted and can no longer be used.
       responses:
         200:
           description: Successfully logged out
@@ -140,7 +143,41 @@ paths:
                     type: string
                     example: "Logged out successfully"
         401:
-          $ref: '#/components/responses/Unauthorized'
+          description: Unauthorized - Token missing or invalid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Access token required"
+                  message:
+                    type: string
+                    example: "Please provide a valid access token"
+        403:
+          description: Forbidden - Token already revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token has been revoked"
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Logout Error"
+                  message:
+                    type: string
+                    example: "Failed to logout"
 
   /api/shorten:
     post:

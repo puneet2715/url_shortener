@@ -3,6 +3,8 @@ const passport = require('passport');
 const router = express.Router();
 const { AuthService } = require('../services/auth.service');
 const { logger } = require('../config/logger');
+const { TokenService } = require('../services/token.service');
+const { authenticateToken } = require('../middleware/auth.middleware');
 
 // Google OAuth login route
 router.get('/google',
@@ -69,26 +71,25 @@ router.get('/current-auth', (req, res) => {
 });
 
 // Logout route
-router.get('/logout', (req, res) => {
+router.get('/logout', authenticateToken, async (req, res) => {
   try {
-    // Clear the authentication data from session
-    req.session.authData = null;
+    // Get the token from the authorization header
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    // Blacklist the current token
+    await TokenService.blacklistToken(token, req.user.userId);
     
-    // Passport logout
-    req.logout(() => {
-      // Destroy the session
+    // Clear the session if it exists
+    if (req.session) {
       req.session.destroy((err) => {
         if (err) {
           logger.error('Error destroying session:', err);
-          return res.status(500).json({ 
-            error: 'Logout Error',
-            message: 'Failed to complete logout process'
-          });
         }
-        
-        res.json({ message: 'Logged out successfully' });
       });
-    });
+    }
+
+    res.json({ message: 'Logged out successfully' });
   } catch (error) {
     logger.error('Logout error:', { 
       error: error.message, 
