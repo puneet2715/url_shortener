@@ -52,7 +52,6 @@ jobs:
             docker compose down
             # Remove the existing image to force a new pull
             docker rmi puneet2109/url-shorty:latest || true
-            docker rmi url_shortener_alter_office-app:latest || true
             # Pull the latest image
             docker compose pull
             # Start the services
