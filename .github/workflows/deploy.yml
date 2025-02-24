@@ -41,6 +41,6 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /root/docker/url_shortener_alter_office
-            docker-compose pull
-            docker-compose up -d --force-recreate url-shorty
+            docker compose pull
+            docker compose up -d --force-recreate url-shorty
             docker image prune -f 
