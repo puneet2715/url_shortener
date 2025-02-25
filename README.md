@@ -17,6 +17,7 @@ A comprehensive URL shortening service with advanced analytics, custom aliases, 
 - **Caching**: Redis-based caching for improved performance
 - **API Documentation**: Swagger/OpenAPI documentation
 - **Containerization**: Docker support for easy deployment
+- **CI/CD**: Continuous Integration/Continuous Deployment via GitHub Actions
 
 ## Prerequisites
 
@@ -60,6 +61,7 @@ RATE_LIMIT_MAX_REQUESTS=100
 
 # URL Configuration
 BASE_URL=http://localhost:3000
+PROD_URL=https://your-production-domain.com  # Production URL for redirects in production environment
 ```
 
 ## Database Setup
@@ -69,10 +71,17 @@ BASE_URL=http://localhost:3000
 CREATE DATABASE url_shorty;
 ```
 
-2. Run the database migrations:
-```bash
-psql -U your_postgres_user -d url_shorty -f src/db/schema.sql
-```
+2. Run the database migrations using one of the following methods:
+
+   a. Using the provided init-db script:
+   ```bash
+   npm run init-db
+   ```
+
+   b. Manually with SQL file:
+   ```bash
+   psql -U your_postgres_user -d url_shorty -f src/db/schema.sql
+   ```
 
 ## Installation
 
@@ -127,6 +136,46 @@ docker build -t url-shorty .
 2. Run the container:
 ```bash
 docker run -p 3000:3000 --env-file .env url-shorty
+```
+
+## CI/CD Setup
+
+This project uses GitHub Actions for Continuous Integration and Continuous Deployment to automatically deploy changes to the VPS when code is merged to the main branch.
+
+### GitHub Secrets Required
+
+Set up the following secrets in your GitHub repository settings:
+
+- `DOCKERHUB_USERNAME`: Your Docker Hub username
+- `DOCKERHUB_TOKEN`: Docker Hub access token (create in Docker Hub settings)
+- `VPS_HOST`: Your VPS IP address
+- `VPS_USERNAME`: SSH username for your VPS
+- `VPS_SSH_KEY`: SSH private key for VPS access
+
+### Workflow Process
+
+1. When code is pushed to the `main` branch:
+   - GitHub Actions builds a multi-architecture Docker image (amd64/arm64)
+   - Pushes the image to Docker Hub
+   - Connects to your VPS via SSH
+   - Pulls the latest image and restarts the container
+
+### Manual Deployment
+
+If you need to manually deploy:
+
+1. SSH into your VPS
+2. Navigate to the application directory:
+```bash
+cd /root/docker/url_shortener_alter_office
+```
+
+3. Pull the latest image and restart:
+```bash
+docker compose down
+docker rmi puneet2109/url-shorty:latest || true
+docker compose pull
+docker compose up -d
 ```
 
 ## API Documentation
