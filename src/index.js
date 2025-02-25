@@ -1,4 +1,17 @@
+// Save original NODE_ENV before dotenv can override it
+const originalNodeEnv = process.env.NODE_ENV;
+
+// Load env variables from .env file
 require('dotenv').config();
+
+// Restore NODE_ENV if it was set before dotenv
+if (originalNodeEnv) {
+  process.env.NODE_ENV = originalNodeEnv;
+}
+
+// Log the environment at startup
+console.log(`Starting server with NODE_ENV=${process.env.NODE_ENV}`);
+
 const express = require('express');
 const session = require('express-session');
 const passport = require('passport');

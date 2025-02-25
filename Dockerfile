@@ -25,5 +25,5 @@ ENV NODE_ENV=production
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["npm", "start"] 
+# Start the application with explicitly set NODE_ENV that can't be overridden
+CMD ["node", "-e", "process.env.NODE_ENV='production'; require('./src/index.js')"] 
