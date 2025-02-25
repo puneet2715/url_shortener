@@ -83,6 +83,102 @@ CREATE DATABASE url_shorty;
    psql -U your_postgres_user -d url_shorty -f src/db/schema.sql
    ```
 
+## Data Model
+
+The application uses the following data model:
+
+### Database Schema
+
+```
+Table Users {
+  id int [pk]
+  google_id varchar
+  email varchar
+  name varchar
+  picture varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table URLs {
+  id int [pk]
+  user_id int [ref: > Users.id]
+  original_url varchar
+  short_code varchar
+  topic varchar
+  created_at timestamp
+  updated_at timestamp
+  expiration_date timestamp
+}
+
+Table Clicks {
+  id int [pk]
+  url_id int [ref: > URLs.id]
+  timestamp timestamp
+  ip_address varchar
+  user_agent varchar
+  referrer varchar
+  country varchar
+  device_type varchar
+  browser varchar
+  os varchar
+}
+
+Table Topics {
+  id int [pk]
+  name varchar
+  description text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table URL_Analytics {
+  url_id int [pk, ref: - URLs.id]
+  total_clicks int
+  unique_visitors int
+  last_accessed timestamp
+}
+```
+
+> Note: View the database diagram at [dbdiagram.io](https://dbdiagram.io/d/Url-Shortener-Alter-Office-67bd8328263d6cf9a05cd8d4).
+
+### Table Descriptions
+
+1. **Users**: Stores user information from Google OAuth authentication.
+   - Primary key: `id` (auto-incremented)
+   - Unique identifier: `google_id` (from Google OAuth)
+   - User data: `email`, `name`, `picture`
+   - Timestamps: `created_at`, `updated_at`
+
+2. **URLs**: Stores the mapping between original URLs and their shortened versions.
+   - Primary key: `id` (auto-incremented)
+   - Foreign key: `user_id` (references Users.id)
+   - URL data: `original_url`, `short_code`, `topic`
+   - Timestamps: `created_at`, `updated_at`, `expiration_date`
+
+3. **Clicks**: Records each click/visit to a shortened URL.
+   - Primary key: `id` (auto-incremented)
+   - Foreign key: `url_id` (references URLs.id)
+   - Click data: `timestamp`, `ip_address`, `user_agent`, `referrer`
+   - Analytics data: `country`, `device_type`, `browser`, `os`
+
+4. **Topics**: Categorizes URLs for organizational purposes.
+   - Primary key: `id` (auto-incremented)
+   - Topic data: `name`, `description`
+   - Timestamps: `created_at`, `updated_at`
+
+5. **URL_Analytics**: Aggregated analytics data for each URL.
+   - Foreign key: `url_id` (references URLs.id)
+   - Analytics data: `total_clicks`, `unique_visitors`, `last_accessed`
+
+### Key Relationships
+
+- A User can create multiple URLs (one-to-many)
+- A URL belongs to a single User (many-to-one)
+- A URL can be optionally categorized under a Topic (many-to-one)
+- A URL has many Clicks (one-to-many)
+- Each URL has aggregated analytics (one-to-one)
+
 ## Installation
 
 1. Install dependencies:
