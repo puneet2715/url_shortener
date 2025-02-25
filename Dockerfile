@@ -19,6 +19,9 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Set environment variable
+ENV NODE_ENV=production
+
 # Expose port
 EXPOSE 3000
 
