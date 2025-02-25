@@ -37,6 +37,14 @@ const authRoutes = require('./routes/auth.routes');
 const urlRoutes = require('./routes/url.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 
+// Log Node.js environment info
+logger.info(`Node Version: ${process.version}`);
+logger.info(`Environment Variables:`);
+logger.info(`- NODE_ENV: ${process.env.NODE_ENV}`);
+logger.info(`- PORT: ${process.env.PORT}`);
+logger.info(`- REDIS_HOST: ${process.env.REDIS_HOST}`);
+logger.info(`- REDIS_PORT: ${process.env.REDIS_PORT}`);
+
 const app = express();
 
 // Basic middleware
@@ -51,7 +59,7 @@ app.use(morgan('combined', { stream }));
 
 // Session configuration with Redis for production
 let sessionConfig = {
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || 'fallback_secret_dont_use_in_production',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -63,34 +71,26 @@ let sessionConfig = {
 // Use Redis as session store in production
 if (process.env.NODE_ENV === 'production') {
   try {
-    logger.info('Setting up Redis session store for production using existing Redis client');
+    logger.info('Setting up Redis session store for production');
     
-    // Make sure Redis client is connected
-    if (!redisClient.isReady) {
-      logger.info('Redis client not connected. Attempting to connect...');
-      redisClient.connect().catch(err => {
-        logger.error('Redis connection error:', err);
+    if (!redisClient) {
+      logger.error('Redis client is not defined - check db.js');
+    } else {
+      logger.info(`Redis client ready state: ${redisClient.isReady ? 'Ready' : 'Not Ready'}`);
+      
+      if (!redisClient.isReady) {
+        logger.info('Redis client not ready, waiting for connection...');
+      }
+      
+      // Set up Redis store regardless - it will work once Redis connects
+      sessionConfig.store = new RedisStore({ 
+        client: redisClient,
+        prefix: 'session:',
+        logErrors: true
       });
+      
+      logger.info('Redis session store configured');
     }
-    
-    // Add connection event listeners if not already added
-    if (!redisClient.listenerCount('error')) {
-      redisClient.on('error', (err) => {
-        logger.error('Redis client error:', err);
-      });
-    }
-    
-    if (!redisClient.listenerCount('connect')) {
-      redisClient.on('connect', () => {
-        logger.info('Connected to Redis successfully');
-      });
-    }
-    
-    sessionConfig.store = new RedisStore({ 
-      client: redisClient,
-      prefix: 'session:',
-    });
-    logger.info('Redis session store configured');
   } catch (err) {
     logger.error('Failed to initialize Redis session store:', err);
     logger.warn('Falling back to MemoryStore (not recommended for production)');
@@ -98,6 +98,12 @@ if (process.env.NODE_ENV === 'production') {
 } else {
   logger.warn('Using MemoryStore for sessions (not recommended for production)');
 }
+
+// Log session configuration
+logger.info('Session configuration:', {
+  secure: sessionConfig.cookie.secure,
+  store: sessionConfig.store ? 'Redis Store' : 'Memory Store'
+});
 
 app.use(session(sessionConfig));
 
