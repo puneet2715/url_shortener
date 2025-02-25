@@ -22,10 +22,12 @@ const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
 const path = require('path');
 const morgan = require('morgan');
+const RedisStore = require('connect-redis').default;
 
 const { setupPassport } = require('./config/passport');
 const { errorHandler } = require('./middleware/errorHandler');
 const { logger, stream } = require('./config/logger');
+const { redisClient } = require('./config/db');
 const authRoutes = require('./routes/auth.routes');
 const urlRoutes = require('./routes/url.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
@@ -42,8 +44,8 @@ app.use(helmet());
 // Setup request logging
 app.use(morgan('combined', { stream }));
 
-// Session configuration
-app.use(session({
+// Session configuration with Redis for production
+let sessionConfig = {
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
@@ -51,7 +53,45 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
-}));
+};
+
+// Use Redis as session store in production
+if (process.env.NODE_ENV === 'production') {
+  try {
+    logger.info('Setting up Redis session store for production using existing Redis client');
+    
+    // Make sure Redis client is connected
+    if (!redisClient.isReady) {
+      logger.info('Redis client not connected. Attempting to connect...');
+      redisClient.connect().catch(err => {
+        logger.error('Redis connection error:', err);
+      });
+    }
+    
+    // Add connection event listeners if not already added
+    if (!redisClient.listenerCount('error')) {
+      redisClient.on('error', (err) => {
+        logger.error('Redis client error:', err);
+      });
+    }
+    
+    if (!redisClient.listenerCount('connect')) {
+      redisClient.on('connect', () => {
+        logger.info('Connected to Redis successfully');
+      });
+    }
+    
+    sessionConfig.store = new RedisStore({ client: redisClient });
+    logger.info('Redis session store configured');
+  } catch (err) {
+    logger.error('Failed to initialize Redis session store:', err);
+    logger.warn('Falling back to MemoryStore (not recommended for production)');
+  }
+} else {
+  logger.warn('Using MemoryStore for sessions (not recommended for production)');
+}
+
+app.use(session(sessionConfig));
 
 // Passport configuration
 app.use(passport.initialize());
