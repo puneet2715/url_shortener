@@ -13,7 +13,7 @@ const authenticateToken = async (req, res, next) => {
     // Check if token is blacklisted
     const isBlacklisted = await TokenService.isTokenBlacklisted(token);
     if (isBlacklisted) {
-      return res.status(401).json({ error: 'Token has been revoked' });
+      return res.status(401).json({ error: 'PLease login again' });
     }
 
     const decoded = jwt.verify(token, process.env.SESSION_SECRET);
