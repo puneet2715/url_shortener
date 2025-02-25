@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=${NODE_ENV:-production}
+      - NODE_ENV=production
     networks:
       - nginx_proxy_manager_default
     healthcheck:
