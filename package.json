@@ -4,7 +4,7 @@
   "description": "Advanced URL Shortener with Analytics and Rate Limiting",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "NODE_ENV=production node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "jest",
     "init-db": "node src/scripts/init-db.js"
