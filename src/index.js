@@ -9,6 +9,11 @@ if (originalNodeEnv) {
   process.env.NODE_ENV = originalNodeEnv;
 }
 
+// Make absolutely sure NODE_ENV is set to production in container
+if (process.env.NODE_ENV !== 'production') {
+  process.env.NODE_ENV = 'production';
+}
+
 // Log the environment at startup
 console.log(`Starting server with NODE_ENV=${process.env.NODE_ENV}`);
 
@@ -81,7 +86,10 @@ if (process.env.NODE_ENV === 'production') {
       });
     }
     
-    sessionConfig.store = new RedisStore({ client: redisClient });
+    sessionConfig.store = new RedisStore({ 
+      client: redisClient,
+      prefix: 'session:',
+    });
     logger.info('Redis session store configured');
   } catch (err) {
     logger.error('Failed to initialize Redis session store:', err);
@@ -100,8 +108,8 @@ setupPassport();
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS),
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS)
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
 });
 app.use('/api/', limiter);
 
