@@ -18,7 +18,7 @@ const authenticateToken = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.SESSION_SECRET);
     req.user = {
-      userId: decoded.userId, // This is now the google_id
+      userId: decoded.userId, // This is now the google id
       email: decoded.email,
       name: decoded.name,
       avatar: decoded.avatar
