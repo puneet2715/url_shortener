@@ -27,9 +27,8 @@ const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
 const path = require('path');
 const morgan = require('morgan');
-// Fix import format for connect-redis
-const connectRedis = require('connect-redis');
-const RedisStore = connectRedis(session);
+// Fix import format for connect-redis (for version 7+)
+const { RedisStore } = require('connect-redis');
 
 const { setupPassport } = require('./config/passport');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -92,10 +91,9 @@ if (process.env.NODE_ENV === 'production') {
       }
       
       // Set up Redis store regardless - it will work once Redis connects
-      sessionConfig.store = new RedisStore({ 
+      sessionConfig.store = new RedisStore({
         client: redisClient,
-        prefix: 'session:',
-        logErrors: true
+        prefix: 'session:'
       });
       
       logger.info('Redis session store configured');
