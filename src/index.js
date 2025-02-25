@@ -27,7 +27,9 @@ const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
 const path = require('path');
 const morgan = require('morgan');
-const RedisStore = require('connect-redis').default;
+// Fix import format for connect-redis
+const connectRedis = require('connect-redis');
+const RedisStore = connectRedis(session);
 
 const { setupPassport } = require('./config/passport');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -80,6 +82,13 @@ if (process.env.NODE_ENV === 'production') {
       
       if (!redisClient.isReady) {
         logger.info('Redis client not ready, waiting for connection...');
+        // Make sure we're connected or attempting to connect
+        if (!redisClient.isOpen) {
+          logger.info('Redis client not open, attempting to connect...');
+          redisClient.connect().catch(err => {
+            logger.error('Redis connection error:', err);
+          });
+        }
       }
       
       // Set up Redis store regardless - it will work once Redis connects
