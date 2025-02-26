@@ -375,6 +375,8 @@ The project uses the following development tools:
 - Jest for testing
 - Supertest for API testing
 
+You can check out the development time spent on this project on [Wakatime](https://wakatime.com/@shadowDragon/projects/bazcmyvgtu?start=2025-02-20&end=2025-02-26).
+
 ## Contributing
 
 1. Fork the repository
