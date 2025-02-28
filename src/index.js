@@ -120,11 +120,11 @@ app.use(passport.session());
 setupPassport();
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
-});
-app.use('/api/', limiter);
+// const limiter = rateLimit({
+//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
+//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
+// });
+// app.use('/api/', limiter);
 
 // Swagger documentation
 const swaggerDocument = YAML.load(path.join(__dirname, 'docs/swagger.yaml'));
