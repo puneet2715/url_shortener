@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth.middleware');
 const UrlService = require('../services/url.service');
+const AnalyticsService = require('../services/analytics.service');
 // Remove the direct import of rate-limit
 // const rateLimit = require('express-rate-limit');
 
@@ -45,8 +46,8 @@ router.get('/:shortUrl', async (req, res, next) => {
     const { shortUrl } = req.params;
     const longUrl = await UrlService.getLongUrl(shortUrl);
     
-    // Track the visit
-    await UrlService.trackVisit(shortUrl, req);
+    // Track the visit using AnalyticsService instead of UrlService
+    await AnalyticsService.trackVisitFromRequest(shortUrl, req);
     
     res.redirect(longUrl);
   } catch (err) {

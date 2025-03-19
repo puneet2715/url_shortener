@@ -22,40 +22,40 @@ class SchedulerService {
       }));
 
     // Sync analytics every 5 minutes
-    cron.schedule('*/5 * * * *', async () => {
-      try {
-        await BatchProcessor.processAnalytics();
-      } catch (error) {
-        logger.error('Failed to process analytics:', error);
-      }
-    });
+    // cron.schedule('*/5 * * * *', async () => {
+    //   try {
+    //     await BatchProcessor.processAnalytics();
+    //   } catch (error) {
+    //     logger.error('Failed to process analytics:', error);
+    //   }
+    // });
 
     // Clean up expired data daily
-    cron.schedule('0 0 * * *', async () => {
-      try {
-        await this.cleanup();
-      } catch (error) {
-        logger.error('Failed to cleanup:', error);
-      }
-    });
+    // cron.schedule('0 0 * * *', async () => {
+    //   try {
+    //     await this.cleanup();
+    //   } catch (error) {
+    //     logger.error('Failed to cleanup:', error);
+    //   }
+    // });
       
     // Backup Redis to PostgreSQL every hour
-    cron.schedule('0 * * * *', async () => {
-    try {
-        await BatchProcessor.backupRedisData();
-    } catch (error) {
-        logger.error('Failed to backup Redis data:', error);
-    }
-    });
+    // cron.schedule('0 * * * *', async () => {
+    // try {
+    //     await BatchProcessor.backupRedisData();
+    // } catch (error) {
+    //     logger.error('Failed to backup Redis data:', error);
+    // }
+    // });
   
     // Update analytics aggregates every 15 minutes
-    cron.schedule('*/15 * * * *', async () => {
-    try {
-        await BatchProcessor.updateAnalyticsAggregates();
-    } catch (error) {
-        logger.error('Failed to update analytics aggregates:', error);
-    }
-    });
+    // cron.schedule('*/15 * * * *', async () => {
+    // try {
+    //     await BatchProcessor.updateAnalyticsAggregates();
+    // } catch (error) {
+    //     logger.error('Failed to update analytics aggregates:', error);
+    // }
+    // });
     }
     
     static stopAll() {
