@@ -19,11 +19,22 @@ class CacheService {
     // Check Redis cache
     const redisData = await redisClient.get(key);
     if (redisData) {
-      // Populate memory cache
-      if (!skipMemory) {
-        memoryCache.set(key, redisData, memoryTTL);
+      try {
+        // Parse the JSON string from Redis
+        const parsedData = JSON.parse(redisData);
+        
+        // Populate memory cache with the parsed object
+        if (!skipMemory) {
+          memoryCache.set(key, parsedData, memoryTTL);
+        }
+        return parsedData;
+      } catch (error) {
+        // If parsing fails (not JSON), return the raw data
+        if (!skipMemory) {
+          memoryCache.set(key, redisData, memoryTTL);
+        }
+        return redisData;
       }
-      return redisData;
     }
 
     // Fetch fresh data
