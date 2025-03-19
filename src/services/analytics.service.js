@@ -1,4 +1,4 @@
-import { CacheService } from './cache.service';
+const { CacheService } = require('./cache.service');
 const { pool, redisClient } = require('../config/db');
 const UAParser = require('ua-parser-js');
 const geoip = require('geoip-lite');
