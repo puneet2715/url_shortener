@@ -8,6 +8,10 @@ const pool = new Pool({
   database: process.env.POSTGRES_DB,
   user: process.env.POSTGRES_USER,
   password: process.env.POSTGRES_PASSWORD,
+  max: 20, // Increase from default 10
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+  statement_timeout: 2000
 });
 
 // Redis configuration
@@ -40,15 +44,24 @@ redisClient.on('ready', () => {
 });
 
 // Connect with proper error handling
-(async () => {
-  try {
+// (async () => {
+//   try {
+//     await redisClient.connect();
+//   } catch (err) {
+//     console.error('Failed to connect to Redis:', err);
+//   }
+// })();
+
+// Ensure Redis client is connected
+const connectRedis = async () => {
+  if (!redisClient.isOpen) {
     await redisClient.connect();
-  } catch (err) {
-    console.error('Failed to connect to Redis:', err);
   }
-})();
+  return redisClient;
+};
 
 module.exports = {
   pool,
-  redisClient
+  redisClient,
+  connectRedis
 }; 

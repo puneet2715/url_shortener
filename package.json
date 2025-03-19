@@ -4,7 +4,8 @@
   "description": "Advanced URL Shortener with Analytics and Rate Limiting",
   "main": "src/index.js",
   "scripts": {
-    "start": "NODE_ENV=production node src/index.js",
+    "start": "node src/index.js",
+    "start-prod": "NODE_ENV=production node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "jest",
     "init-db": "node src/scripts/init-db.js"
@@ -25,11 +26,14 @@
     "passport": "^0.6.0",
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.11.3",
+    "rate-limit-redis": "^4.2.0",
     "redis": "^4.6.13",
     "swagger-ui-express": "^5.0.0",
     "ua-parser-js": "^1.0.37",
     "winston": "^3.11.0",
-    "yamljs": "^0.3.0"
+    "yamljs": "^0.3.0",
+     "node-cache": "^5.1.2",
+    "node-cron": "^3.0.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",
