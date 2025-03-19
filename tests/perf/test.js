@@ -7,7 +7,7 @@ export const options = {
         // { duration: '20s', target: 100 },
         // { duration: '30s', target: 200 },
         // { duration: '40s', target: 400 },
-        { duration: '3s', target: 1 },
+        { duration: '300s', target: 100 },
     ],
 };
 
@@ -30,7 +30,7 @@ export default function () {
     const params = { 
         headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMTQ1OTM0MjY2Nzk1NjIxMTA4ODgiLCJlbWFpbCI6InB1bmVldDI3MTVAZ21haWwuY29tIiwibmFtZSI6IlB1bmVldCBBcm9yYSIsImF2YXRhciI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL0FDZzhvY0lCT0ZVcV80UjhHcUZpZFM1ZnVUMnU5Z2Z2TEZMc2hIWW9DekxLWFQzbk0tMkpORXV6PXM5Ni1jIiwiaWF0IjoxNzQxNzc3NzIwLCJleHAiOjE3NDE3ODEzMjB9.0CjD1zBjxshjIGuWxzo4q8MyrH0liA1eGeAcvbT4mXA"  
+            "Authorization": "Bearer "
         },
 }
     
