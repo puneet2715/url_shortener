@@ -2,15 +2,24 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth.middleware');
 const UrlService = require('../services/url.service');
-const rateLimit = require('express-rate-limit');
+// Remove the direct import of rate-limit
+// const rateLimit = require('express-rate-limit');
 
-// Rate limiting middleware
-const createUrlLimiter = rateLimit({
+// Import our custom rate limiter middleware
+const { createUserRateLimiter } = require('../middleware/rate-limit.middleware');
+
+// Rate limiting middleware - now using user ID-based limiting
+const createUrlLimiter = createUserRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 100, // limit each user to 100 requests per windowMs
+  message: {
+    error: 'Too Many Requests',
+    message: 'You have created too many short URLs. Please try again later.'
+  }
 });
 
 // Create short URL
+// Note: Put authenticateToken before the rate limiter so user ID is available
 router.post('/', authenticateToken, createUrlLimiter, async (req, res, next) => {
   try {
     const { longUrl, customAlias, topic } = req.body;
@@ -22,7 +31,7 @@ router.post('/', authenticateToken, createUrlLimiter, async (req, res, next) => 
     const url = await UrlService.createShortUrl(req.user.userId, longUrl, customAlias, topic);
     
     res.json({
-      shortUrl: `${process.env.NODE_ENV === 'production' ? process.env.PROD_URL : process.env.BASE_URL}/api/shorten/${url.short_url}`,
+      shortUrl: `${process.env.NODE_ENV === 'production' ? process.env.PROD_URL : process.env.BASE_URL}/api/shorten/${url.shortUrl}`,
       createdAt: url.created_at
     });
   } catch (err) {

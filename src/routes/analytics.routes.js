@@ -2,15 +2,24 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth.middleware');
 const UrlService = require('../services/url.service');
-const rateLimit = require('express-rate-limit');
+// Remove the direct import of rate-limit
+// const rateLimit = require('express-rate-limit');
 
-// Rate limiting middleware
-const analyticsLimiter = rateLimit({
+// Import our custom rate limiter middleware
+const { createUserRateLimiter } = require('../middleware/rate-limit.middleware');
+
+// Rate limiting middleware - now using user ID-based limiting
+const analyticsLimiter = createUserRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 100, // limit each user to 100 requests per windowMs
+  message: {
+    error: 'Too Many Requests',
+    message: 'You have made too many analytics requests. Please try again later.'
+  }
 });
 
 // Get overall analytics - This must come before /:alias route
+// Note: Put authenticateToken before the rate limiter so user ID is available
 router.get('/overall', authenticateToken, analyticsLimiter, async (req, res, next) => {
   try {
     const analytics = await UrlService.getOverallAnalytics(req.user.userId);
@@ -21,6 +30,7 @@ router.get('/overall', authenticateToken, analyticsLimiter, async (req, res, nex
 });
 
 // Get topic-based analytics - This must come before /:alias route
+// Note: Put authenticateToken before the rate limiter so user ID is available
 router.get('/topic/:topic', authenticateToken, analyticsLimiter, async (req, res, next) => {
   try {
     const { topic } = req.params;
@@ -32,6 +42,7 @@ router.get('/topic/:topic', authenticateToken, analyticsLimiter, async (req, res
 });
 
 // Get URL analytics
+// Note: Put authenticateToken before the rate limiter so user ID is available
 router.get('/:alias', authenticateToken, analyticsLimiter, async (req, res, next) => {
   try {
     const { alias } = req.params;

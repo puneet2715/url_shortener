@@ -334,9 +334,13 @@ http://localhost:3000/api-docs
 
 ## Rate Limiting
 
-The API implements rate limiting to prevent abuse:
-- URL creation: 100 requests per 15 minutes per IP
-- Analytics endpoints: 100 requests per 15 minutes per IP
+The API implements user ID-based rate limiting to prevent abuse:
+- URL creation: 100 requests per 15 minutes per user
+- Analytics endpoints: 100 requests per 15 minutes per user
+- Global API rate limit: Configurable via environment variables
+
+Rate limiting is backed by Redis in production for better performance and reliability.
+For unauthenticated requests, the system falls back to IP-based rate limiting.
 
 ## Caching
 

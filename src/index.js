@@ -1,18 +1,25 @@
 // Save original NODE_ENV before dotenv can override it
-const originalNodeEnv = process.env.NODE_ENV;
+// const originalNodeEnv = process.env.NODE_ENV;
+// const originalNodeEnv = process.env.NODE_ENV;
 
 // Load env variables from .env file
 require('dotenv').config();
 
 // Restore NODE_ENV if it was set before dotenv
-if (originalNodeEnv) {
-  process.env.NODE_ENV = originalNodeEnv;
-}
+// if (originalNodeEnv) {
+//   process.env.NODE_ENV = originalNodeEnv;
+// }
+// if (originalNodeEnv) {
+//   process.env.NODE_ENV = originalNodeEnv;
+// }
 
 // Make absolutely sure NODE_ENV is set to production in container
-if (process.env.NODE_ENV !== 'production') {
-  process.env.NODE_ENV = 'production';
-}
+// if (process.env.NODE_ENV !== 'production') {
+//   process.env.NODE_ENV = 'production';
+// }
+// if (process.env.NODE_ENV !== 'production') {
+//   process.env.NODE_ENV = 'production';
+// }
 
 // Log the environment at startup
 console.log(`Starting server with NODE_ENV=${process.env.NODE_ENV}`);
@@ -37,6 +44,9 @@ const { redisClient } = require('./config/db');
 const authRoutes = require('./routes/auth.routes');
 const urlRoutes = require('./routes/url.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
+const { createRedisRateLimiter } = require('./middleware/rate-limit.middleware');
+
+const SchedulerService = require('./services/scheduler.service');
 
 // Log Node.js environment info
 logger.info(`Node Version: ${process.version}`);
@@ -70,7 +80,7 @@ let sessionConfig = {
 };
 
 // Use Redis as session store in production
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === 'development') {
   try {
     logger.info('Setting up Redis session store for production');
     
@@ -119,12 +129,18 @@ app.use(passport.initialize());
 app.use(passport.session());
 setupPassport();
 
-// Rate limiting
-// const limiter = rateLimit({
-//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
-//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
+// Global rate limiting for all API routes
+// const apiLimiter = createRedisRateLimiter({
+//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15 minutes by default
+//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // 100 requests per window by default
+//   message: {
+//     error: 'Too Many Requests',
+//     message: 'Too many requests from this user, please try again later'
+//   }
 // });
-// app.use('/api/', limiter);
+
+// Apply rate limiting to all API routes
+// app.use('/api/', apiLimiter);
 
 // Swagger documentation
 const swaggerDocument = YAML.load(path.join(__dirname, 'docs/swagger.yaml'));
@@ -138,9 +154,20 @@ app.use('/api/analytics', analyticsRoutes);
 // Error handling
 app.use(errorHandler);
 
+// Initialize the scheduler
+SchedulerService.init();
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   logger.info(`Server is running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV}`);
   logger.debug('Debug logging enabled');
 }); 
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received. Stopping cron jobs...');
+  SchedulerService.stopAll();
+  // ... other cleanup
+  process.exit(0);
+});
