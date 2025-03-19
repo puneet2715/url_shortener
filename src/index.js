@@ -80,7 +80,7 @@ let sessionConfig = {
 };
 
 // Use Redis as session store in production
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === 'production') {
   try {
     logger.info('Setting up Redis session store for production');
     
