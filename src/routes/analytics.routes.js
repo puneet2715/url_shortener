@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth.middleware');
-const UrlService = require('../services/url.service');
+// Replace UrlService with AnalyticsService
+const AnalyticsService = require('../services/analytics.service');
 // Remove the direct import of rate-limit
 // const rateLimit = require('express-rate-limit');
 
@@ -22,7 +23,7 @@ const analyticsLimiter = createUserRateLimiter({
 // Note: Put authenticateToken before the rate limiter so user ID is available
 router.get('/overall', authenticateToken, analyticsLimiter, async (req, res, next) => {
   try {
-    const analytics = await UrlService.getOverallAnalytics(req.user.userId);
+    const analytics = await AnalyticsService.getOverallAnalytics(req.user.userId);
     res.json(analytics);
   } catch (err) {
     next(err);
@@ -34,7 +35,7 @@ router.get('/overall', authenticateToken, analyticsLimiter, async (req, res, nex
 router.get('/topic/:topic', authenticateToken, analyticsLimiter, async (req, res, next) => {
   try {
     const { topic } = req.params;
-    const analytics = await UrlService.getTopicAnalytics(topic);
+    const analytics = await AnalyticsService.getTopicAnalytics(topic);
     res.json(analytics);
   } catch (err) {
     next(err);
@@ -46,7 +47,7 @@ router.get('/topic/:topic', authenticateToken, analyticsLimiter, async (req, res
 router.get('/:alias', authenticateToken, analyticsLimiter, async (req, res, next) => {
   try {
     const { alias } = req.params;
-    const analytics = await UrlService.getUrlAnalytics(alias);
+    const analytics = await AnalyticsService.getUrlAnalytics(alias);
     res.json(analytics);
   } catch (err) {
     next(err);
