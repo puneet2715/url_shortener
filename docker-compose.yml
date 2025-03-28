@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   url-shorty:
     image: puneet2109/url-shorty:latest

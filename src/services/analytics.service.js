@@ -36,17 +36,70 @@ class AnalyticsService {
       // Add to processing queue
       await redisClient.sAdd('pending_analytics', analyticsKey);
       
+      
       // Increment counters atomically
-      const multi = redisClient.multi();
-      multi.incr(`stats:${shortUrl}:total_clicks`);
-      if (sanitizedData.ip) {
-        multi.pfAdd(`stats:${shortUrl}:unique_visitors`, sanitizedData.ip);
+      const statsKey = `stats:${shortUrl}:total_clicks`;
+      const uniqueKey = `stats:${shortUrl}:unique_visitors`;
+      
+      // Initialize counter if it doesn't exist
+      const exists = await redisClient.exists(statsKey);
+      if (!exists) {
+        await redisClient.set(statsKey, '0');
       }
-      await multi.exec();
+
+      const currentClicks = await redisClient.get(statsKey);
+
+      // Verify Redis connection
+      if (!redisClient.isOpen) {
+        logger.warn(`[AnalyticsService.trackVisit] Redis connection not open for ${shortUrl}, reconnecting`);
+        await redisClient.connect();
+      }
+
+      // Attempt increment with retry logic
+      let attempts = 0;
+      const maxAttempts = 3;
+      let success = false;
+      
+      while (attempts < maxAttempts && !success) {
+        attempts++;
+        const multi = redisClient.multi();
+        multi.incr(statsKey);
+        if (sanitizedData.ip) {
+          multi.pfAdd(uniqueKey, sanitizedData.ip);
+        }
+        
+        try {
+          const execResult = await multi.exec();
+          logger.info(`[AnalyticsService.trackVisit] Attempt ${attempts} Redis multi.exec result for ${shortUrl}:`, execResult);
+          
+          // Verify the increment was successful
+          const newClicks = await redisClient.get(statsKey);
+          
+          if (newClicks > currentClicks) {
+            success = true;
+          } else {
+            logger.warn(`[AnalyticsService.trackVisit] Counter increment failed attempt ${attempts} for ${shortUrl}`);
+            await new Promise(resolve => setTimeout(resolve, 100 * attempts)); // Backoff delay
+          }
+        } catch (error) {
+          logger.error(`[AnalyticsService.trackVisit] Redis transaction failed attempt ${attempts} for ${shortUrl}:`, error);
+          await new Promise(resolve => setTimeout(resolve, 100 * attempts)); // Backoff delay
+        }
+      }
+
+      // Final fallback if all attempts failed
+      if (!success) {
+        logger.error(`[AnalyticsService.trackVisit] All increment attempts failed for ${shortUrl}, using direct increment`);
+        await redisClient.incr(statsKey);
+        if (sanitizedData.ip) {
+          await redisClient.pfAdd(uniqueKey, sanitizedData.ip);
+        }
+      }
       
       return true;
     } catch (error) {
-      logger.error('Error in trackVisit function:', {
+      // Restore the logger.error call correctly
+      logger.error('Error in trackVisit function:', { // Restored line
         error: error.message || error,
         shortUrl,
         visitorDataKeys: Object.keys(visitorData || {})
@@ -128,22 +181,33 @@ class AnalyticsService {
   static async getUrlAnalytics(shortUrl) {
     // Use cache service for analytics data
     return CacheService.get(`analytics:${shortUrl}`, async () => {
-      // Fetch from Redis first
+      // Get URL ID first
+      const urlResult = await pool.query('SELECT id FROM urls WHERE short_url = $1', [shortUrl]);
+      if (!urlResult.rows.length) {
+        return {
+          totalClicks: 0,
+          uniqueVisitors: 0
+        };
+      }
+
+      // Always use Redis for counters
       const [totalClicks, uniqueVisitors] = await Promise.all([
         redisClient.get(`stats:${shortUrl}:total_clicks`),
         redisClient.pfCount(`stats:${shortUrl}:unique_visitors`)
       ]);
 
-      // Fall back to PostgreSQL for historical data
-      if (!totalClicks) {
-        return this.getAnalyticsFromPostgres(shortUrl);
-      }
-
-      return {
+      const analytics = {
         totalClicks: parseInt(totalClicks || '0', 10),
         uniqueVisitors: parseInt(uniqueVisitors || '0', 10)
       };
-    }, { memoryTTL: 60, skipMemory: true }); // Short TTL for analytics
+      logger.debug(`Refreshing analytics for ${shortUrl}:`, analytics);
+      return analytics;
+    }, {
+      memoryTTL: 5,  // Reduce to 5 seconds for near real-time
+      skipMemory: true,
+      // Invalidate cache when new data arrives
+      onCacheSet: () => redisClient.del(`analytics:${shortUrl}`)
+    });
   }
 
   static async getAnalyticsFromPostgres(shortUrl) {
