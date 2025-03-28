@@ -22,17 +22,16 @@ class SchedulerService {
       }));
 
     // Sync analytics every 10 seconds
-    this.jobs.set('processAnalytics', cron.schedule('*/10 * * * * *', async () => {
-      try {
-        await BatchProcessor.processAnalytics();
-        await BatchProcessor.syncCounters();
-      } catch (error) {
-        logger.error('Failed to process analytics:', error);
-      }
-    }, {
-      scheduled: true,
-      timezone: "UTC"
-    }));
+    // this.jobs.set('processAnalytics', cron.schedule('*/10 * * * * *', async () => {
+    //   try {
+    //     await BatchProcessor.processAnalytics();
+    //   } catch (error) {
+    //     logger.error('Failed to process analytics:', error);
+    //   }
+    // }, {
+    //   scheduled: true,
+    //   timezone: "UTC"
+    // }));
 
     // Clean up expired data daily
     this.jobs.set('cleanup', cron.schedule('0 0 * * *', async () => {
@@ -47,16 +46,16 @@ class SchedulerService {
     }));
       
     // Sync Redis counters to PostgreSQL every hour
-    this.jobs.set('syncCounters', cron.schedule('0 * * * *', async () => {
-      try {
-        await BatchProcessor.syncCounters();
-      } catch (error) {
-        logger.error('Failed to sync counters:', error);
-      }
-    }, {
-      scheduled: true,
-      timezone: "UTC"
-    }));
+    // this.jobs.set('syncCounters', cron.schedule('0 * * * *', async () => {
+    //   try {
+    //     await BatchProcessor.syncCounters();
+    //   } catch (error) {
+    //     logger.error('Failed to sync counters:', error);
+    //   }
+    // }, {
+    //   scheduled: true,
+    //   timezone: "UTC"
+    // }));
     }
     
     static stopAll() {
