@@ -234,11 +234,20 @@ class UrlService {
       };
   
       try {
-        // Store in Redis with pipeline for better performance
-        const pipeline = redisClient.pipeline();
-        pipeline.hSet(`url:${shortUrl}`, newUrlData);
-        pipeline.expire(`url:${shortUrl}`, 24 * 60 * 60); // 24 hours TTL
-        await pipeline.exec();
+        // Ensure Redis is connected
+        if (!redisClient.isReady) {
+          await connectRedis();
+        }
+
+        // Store in Redis with multi for transaction-like behavior
+        const multi = redisClient.multi();
+        // Convert object to individual field-value pairs
+        for (const [field, value] of Object.entries(newUrlData)) {
+          multi.hSet(`url:${shortUrl}`, field, value);
+        }
+        multi.expire(`url:${shortUrl}`, 24 * 60 * 60); // 24 hours TTL
+        
+        await multi.exec();
       } catch (redisError) {
         logger.warn('Failed to cache URL in Redis:', {
           error: redisError,

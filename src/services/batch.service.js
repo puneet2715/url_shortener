@@ -70,35 +70,29 @@ class BatchProcessor {
     try {
       const BATCH_SIZE = 100;
       
-      // Verify Redis connection
-      if (!redisClient.isOpen) {
-        logger.warn('Redis connection not open in processAnalytics, reconnecting');
-        await redisClient.connect();
-      }
+      // Get pending analytics from PostgreSQL
+      const pendingResult = await pool.query(`
+        SELECT id, url_id, visitor_ip, user_agent,
+               device_type, os_type, browser, country, city
+        FROM pending_analytics
+        ORDER BY created_at
+        LIMIT $1
+      `, [BATCH_SIZE * 10]); // Get slightly more to account for invalid data
 
-      // Get pending analytics
-      const pendingAnalytics = await redisClient.sMembers('pending_analytics');
-      if (!pendingAnalytics.length) {
+      if (!pendingResult.rows.length) {
         logger.debug('No pending analytics to process');
         return;
       }
       
       const startTime = Date.now();
-      logger.info(`Processing ${pendingAnalytics.length} analytics items | Start time: ${new Date(startTime).toISOString()}`);
-      logger.debug(`Sample pending keys: ${pendingAnalytics.slice(0, 3).join(', ')}`);
+      logger.info(`Processing ${pendingResult.rows.length} analytics items | Start time: ${new Date(startTime).toISOString()}`);
       
       // Process in batches
-      for (let i = 0; i < pendingAnalytics.length; i += BATCH_SIZE) {
-        const batch = pendingAnalytics.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < pendingResult.rows.length; i += BATCH_SIZE) {
+        const batch = pendingResult.rows.slice(i, i + BATCH_SIZE);
         
-        // Get analytics data for batch
-        const analyticsPromises = batch.map(key =>
-          redisClient.hGetAll(key)
-        );
-        const analyticsBatch = await Promise.all(analyticsPromises);
-
         // Filter out any empty or invalid data
-        const validAnalytics = analyticsBatch.filter(data => data && data.urlId);
+        const validAnalytics = batch.filter(data => data && data.url_id);
 
         if (!validAnalytics.length) continue;
 
@@ -109,11 +103,11 @@ class BatchProcessor {
         }).join(',');
 
         const flatParams = validAnalytics.flatMap(data => [
-          data.urlId,
-          data.ip || '',
-          data.userAgent || '',
-          data.deviceType || '',
-          data.osType || '',
+          data.url_id,
+          data.visitor_ip || '',
+          data.user_agent || '',
+          data.device_type || '',
+          data.os_type || '',
           data.browser || '',
           data.country || '',
           data.city || ''
@@ -127,17 +121,16 @@ class BatchProcessor {
           ) VALUES ${values}
         `, flatParams);
 
-        // Update Redis status
-        const multi = redisClient.multi();
-        batch.forEach(key => {
-          multi.del(key);
-          multi.sRem('pending_analytics', key);
-        });
-        await multi.exec();
+        // Delete processed items
+        const ids = validAnalytics.map(data => data.id);
+        await pool.query(`
+          DELETE FROM pending_analytics
+          WHERE id = ANY($1)
+        `, [ids]);
 
         const endTime = Date.now();
         const duration = endTime - startTime;
-        logger.info(`Processed batch of ${batch.length} analytics | Duration: ${duration}ms | ${new Date().toISOString()}`);
+        logger.info(`Processed batch of ${validAnalytics.length} analytics | Duration: ${duration}ms | ${new Date().toISOString()}`);
       }
     } catch (error) {
       logger.error('Error in processAnalytics:', error);
@@ -147,38 +140,32 @@ class BatchProcessor {
 
   static async syncCounters() {
     try {
-      // Get all URL stats keys
-      const statsKeys = await redisClient.keys('stats:*:total_clicks');
-      
-      if (!statsKeys.length) {
+      // Get URLs with recent activity from PostgreSQL
+      const urlsResult = await pool.query(`
+        SELECT short_url,
+               COUNT(*) as total_clicks,
+               COUNT(DISTINCT visitor_ip) as unique_visitors
+        FROM analytics
+        WHERE visited_at > CURRENT_TIMESTAMP - INTERVAL '1 hour'
+        GROUP BY short_url
+      `);
+
+      if (!urlsResult.rows.length) {
         logger.debug('No counters to sync');
         return;
       }
 
-      logger.info(`Syncing ${statsKeys.length} counters`);
-
-      // Process each URL's stats
-      for (const key of statsKeys) {
-        const shortUrl = key.split(':')[1];
-        
-        // Get current values from Redis
-        const [totalClicks, uniqueVisitors] = await Promise.all([
-          redisClient.get(`stats:${shortUrl}:total_clicks`),
-          redisClient.pfCount(`stats:${shortUrl}:unique_visitors`)
-        ]);
-
-        // Update last accessed timestamp
+      // Update counters in PostgreSQL
+      for (const row of urlsResult.rows) {
         await pool.query(`
           UPDATE urls
-          SET last_accessed = CURRENT_TIMESTAMP
-          WHERE short_url = $1
-        `, [shortUrl]);
-
-        // Force update of analytics summary
-        await redisClient.del(`analytics:${shortUrl}`);
+          SET
+            total_clicks = total_clicks + $1,
+            unique_visitors = unique_visitors + $2,
+            last_accessed = CURRENT_TIMESTAMP
+          WHERE short_url = $3
+        `, [parseInt(row.total_clicks), parseInt(row.unique_visitors), row.short_url]);
       }
-
-      logger.info('Successfully synced all counters');
     } catch (error) {
       logger.error('Error in syncCounters:', error);
       throw error;
